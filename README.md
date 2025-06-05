@@ -25,25 +25,17 @@ Install the SDK using npm:
 npm install cambai
 ```
 
-Or using yarn:
-
-```bash
-yarn add cambai
-```
-
 Or directly from GitHub:
 
 ```bash
-npm install git+https://github.com/Camb-ai/camb_ai_nodejs_sdk.git
+npm install git+https://github.com/Camb-ai/cambai-node-sdk
 ```
 
 ---
 
 ## 🔑 Authentication
 
-To use the Camb AI SDK, you'll need an API key. You can authenticate in either of the following ways:
-
-### 1. Pass the API key directly
+To use the Camb AI SDK, you'll need an API key. You can authenticate by explicitly setting the API key:
 
 ```javascript
 const { CambAI, ApiKey } = require('cambai');
@@ -53,20 +45,21 @@ const client = new CambAI();
 client.setApiKey(ApiKey.APIKeyHeader, "YOUR_CAMB_AI_API_KEY");
 ```
 
-### 2. Use an environment variable
-Set your API key as an environment variable named `CAMB_AI_API_KEY`:
-
-```bash
-export CAMB_AI_API_KEY="your_actual_api_key_here"
-```
-
-Then in your code:
+You can also use an environment variable to avoid hardcoding your API key:
 
 ```javascript
-const { CambAI } = require('cambai');
+const { CambAI, ApiKey } = require('cambai');
 
-// The SDK will automatically use the CAMB_AI_API_KEY environment variable
+// Get API key from environment variable
+const API_KEY = process.env.CAMB_API_KEY || "YOUR_CAMB_AI_API_KEY";
 const client = new CambAI();
+client.setApiKey(ApiKey.APIKeyHeader, API_KEY);
+```
+
+Set your API key as an environment variable named `CAMB_API_KEY`:
+
+```bash
+export CAMB_API_KEY="your_actual_api_key_here"
 ```
 
 ---
@@ -189,7 +182,6 @@ Generate sound effects or ambient audio from a descriptive prompt.
 
 ```javascript
 const { CambAI, ApiKey } = require('cambai');
-const fs = require('fs');
 
 // Initialize client
 const client = new CambAI();
