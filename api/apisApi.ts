@@ -47,7 +47,9 @@ import { ObjectSerializer, Authentication, VoidAuth, Interceptor } from '../mode
 import { HttpBasicAuth, HttpBearerAuth, ApiKeyAuth, OAuth } from '../model/models';
 
 import { HttpError, RequestFile } from './apis';
-
+import fs from 'fs';
+        
+const POLL_INTERVAL = 5000;
 let defaultBasePath = 'https://client.camb.ai/apis';
 
 // ===============================================
@@ -2811,6 +2813,54 @@ export class CambAI {
     }
 
     /**
+     * Generic polling function that waits for a task to complete
+     * 
+     * @param checkStatusFn Function that checks the status of the task and returns a result
+     * @param isCompleteFn Function that determines if the task is complete based on the result
+     * @param timeout Maximum time to wait in seconds
+     * @param verbose Whether to log status updates
+     * @returns The final result from checkStatusFn
+     * @throws Error if the timeout is reached
+     */
+    public async pollForCompletion<T>(
+        checkStatusFn: () => Promise<T>,
+        isCompleteFn: (result: T) => boolean,
+        timeout: number,
+        verbose: boolean = false,
+        taskName: string = "Task"
+    ): Promise<T> {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < timeout * 1000) {
+            if (verbose) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const remaining = Math.max(0, timeout - elapsed);
+                console.log(`Checking status... (elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining.toFixed(1)}s)`);
+            }
+
+            try {
+                const result = await checkStatusFn();
+                
+                if (isCompleteFn(result)) {
+                    return result;
+                } else if (verbose) {
+                    const status = (result as any).body?.status || "UNKNOWN";
+                    console.log(`Still processing... (status: ${status})`);
+                }
+            } catch (error: any) {
+                if (verbose) {
+                    console.log(`Error checking status: ${error.message}`);
+                }
+            }
+
+            // Wait before next poll
+            await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+        }
+
+        throw new Error(`${taskName} did not complete within ${timeout} seconds`);
+    }
+
+    /**
      * Convert text to audio and return the audio bytes or save to file.
      *
      * This is a convenience method that combines createTextToSound, getTextToAudioStatusById,
@@ -2836,8 +2886,7 @@ export class CambAI {
         saveToFile?: string,
         verbose: boolean = false
     ): Promise<string | Buffer> {
-        const fs = require('fs');
-
+        
         // Create the request payload
         const requestPayload = new CreateTextToAudioRequestPayload();
         requestPayload.prompt = prompt;
@@ -2855,60 +2904,36 @@ export class CambAI {
             console.log(`Waiting for processing to complete (timeout: ${timeout} seconds)...`);
         }
 
-        // Set up polling with timeout
-        const startTime = Date.now();
-        const pollInterval = 1000; // 1 second
+        // Use the polling function to wait for completion
+        const result = await this.pollForCompletion(
+            () => this.getTextToAudioStatusById(taskIdStr),
+            (result) => result.body.runId !== undefined && result.body.status === TaskStatus.Success,
+            timeout,
+            verbose,
+            "Text-to-audio request"
+        );
 
-        // Poll for results until timeout
-        while (Date.now() - startTime < timeout * 1000) {
-            if (verbose) {
-                const elapsed = (Date.now() - startTime) / 1000;
-                const remaining = Math.max(0, timeout - elapsed);
-                console.log(`Checking status... (elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining.toFixed(1)}s)`);
-            }
-
-            try {
-                const result = await this.getTextToAudioStatusById(taskIdStr);
-
-                if (result.body.runId && result.body.status === TaskStatus.Success) {
-                    if (verbose) {
-                        console.log(`Processing complete! Run ID: ${result.body.runId}`);
-                        console.log("Retrieving audio...");
-                    }
-
-                    // Get the audio data
-                    const audioData = await this.getTextToSoundRunResultById(result.body.runId);
-
-                    if (saveToFile) {
-                        try {
-                            fs.writeFileSync(saveToFile, audioData.body);
-                            if (verbose) {
-                                console.log(`Audio saved to file: ${saveToFile}`);
-                            }
-                            return `Audio saved to ${saveToFile}`;
-                        } catch (error: any) {
-                            throw new Error(`Failed to save audio to file: ${error.message}`);
-                        }
-                    }
-
-                    return audioData.body;
-                } else if (verbose) {
-                    const status = result.body.status || 'UNKNOWN';
-                    const runId = result.body.runId || 'none';
-                    console.log(`Still processing... (status: ${status}, runId: ${runId})`);
-                }
-
-            } catch (error: any) {
-                if (verbose) {
-                    console.log(`Error checking status: ${error.message}`);
-                }
-            }
-
-            // Wait before next poll
-            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        if (verbose) {
+            console.log(`Processing complete! Run ID: ${result.body.runId}`);
+            console.log("Retrieving audio...");
         }
 
-        throw new Error(`Text-to-audio request did not complete within ${timeout} seconds`);
+        // Get the audio data
+        const audioData = await this.getTextToSoundRunResultById(result.body.runId!);
+
+        if (saveToFile) {
+            try {
+                fs.writeFileSync(saveToFile, audioData.body);
+                if (verbose) {
+                    console.log(`Audio saved to file: ${saveToFile}`);
+                }
+                return `Audio saved to ${saveToFile}`;
+            } catch (error: any) {
+                throw new Error(`Failed to save audio to file: ${error.message}`);
+            }
+        }
+
+        return audioData.body;
     }
 
     /**
@@ -2951,49 +2976,22 @@ export class CambAI {
             console.log(`Waiting for processing to complete (timeout: ${timeout} seconds)...`);
         }
 
-        // Set up polling with timeout
-        const startTime = Date.now();
-        const pollInterval = 1000; // 1 second
+        // Use the polling function to wait for completion
+        const result = await this.pollForCompletion(
+            () => this.textToVoiceTaskIdGet(taskIdStr),
+            (result) => result.body.runId !== undefined && result.body.status === TaskStatus.Success,
+            timeout,
+            verbose,
+            "Text-to-voice request"
+        );
 
-        // Poll for results until timeout
-        while (Date.now() - startTime < timeout * 1000) {
-            if (verbose) {
-                const elapsed = (Date.now() - startTime) / 1000;
-                const remaining = Math.max(0, timeout - elapsed);
-                console.log(`Checking status... (elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining.toFixed(1)}s)`);
-            }
-
-            try {
-                const result = await this.textToVoiceTaskIdGet(taskIdStr);
-
-                if (result.body.runId) {
-                    if (verbose) {
-                        console.log(`Processing complete! Run ID: ${result.body.runId}`);
-                        console.log(`Retrieving voice result...`);
-                    }
-
-                    const response = await this.getTextToVoiceRunResultById(result.body.runId);
-                    return response.body;
-                } else if (verbose) {
-                    const status = result.body.status;
-                    if (status) {
-                        console.log(`Still processing... (status: ${status})`);
-                    } else {
-                        console.log("Still processing... (status unknown)");
-                    }
-                }
-
-            } catch (error: any) {
-                if (verbose) {
-                    console.log(`Error checking status: ${error.message}`);
-                }
-            }
-
-            // Wait before next poll
-            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        if (verbose) {
+            console.log(`Processing complete! Run ID: ${result.body.runId}`);
+            console.log(`Retrieving voice result...`);
         }
 
-        throw new Error(`Text-to-voice request did not complete within ${timeout} seconds`);
+        const response = await this.getTextToVoiceRunResultById(result.body.runId!);
+        return response.body;
     }
 
     /**
@@ -3100,7 +3098,6 @@ export class CambAI {
         saveToFile?: string,
         verbose: boolean = false
     ): Promise<string | Buffer | any> {
-        const fs = require('fs');
 
         // Create the request payload
         const requestPayload = new CreateTTSRequestPayload();
@@ -3121,61 +3118,40 @@ export class CambAI {
             console.log(`Waiting for processing to complete (timeout: ${timeout} seconds)...`);
         }
 
-        // Set up polling with timeout
-        const startTime = Date.now();
-        const pollInterval = 1000; // 1 second
+        // Use the polling function to wait for completion
+        const result = await this.pollForCompletion(
+            () => this.getTtsResultById(taskIdStr),
+            (result) => result.body.runId !== undefined && result.body.status === TaskStatus.Success,
+            timeout,
+            verbose,
+            "TTS request"
+        );
 
-        while (Date.now() - startTime < timeout * 1000) {
-            if (verbose) {
-                const elapsed = (Date.now() - startTime) / 1000;
-                const remaining = Math.max(0, timeout - elapsed);
-                console.log(`Checking status... (elapsed: ${elapsed.toFixed(1)}s, remaining: ${remaining.toFixed(1)}s)`);
-            }
-
-            try {
-                const result = await this.getTtsResultById(taskIdStr);
-
-                if (result.body.runId) {
-                    if (verbose) {
-                        console.log(`Processing complete! Run ID: ${result.body.runId}`);
-                        console.log(`Retrieving audio with output type: ${outputType}`);
-                    }
-
-                    if (outputType === OutputType.RawBytes) {
-                        // Use raw method for binary data
-                        const response = await this.getTtsRunInfoByIdRaw(result.body.runId, outputType);
-
-                        if (saveToFile) {
-                            try {
-                                fs.writeFileSync(saveToFile, response.body);
-                                if (verbose) {
-                                    console.log(`Audio saved to file: ${saveToFile}`);
-                                }
-                                return `Audio saved to ${saveToFile}`;
-                            } catch (error: any) {
-                                throw new Error(`Failed to save audio to file: ${error.message}`);
-                            }
-                        }
-
-                        return response.body;
-                    } else {
-                        const response = await this.getTtsRunInfoById(result.body.runId, outputType);
-                        return response.body;
-                    }
-                } else if (verbose) {
-                    console.log(`Still processing... (status: ${result.body.status})`);
-                }
-
-            } catch (error: any) {
-                if (verbose) {
-                    console.log(`Error checking status: ${error.message}`);
-                }
-            }
-
-            // Wait before next poll
-            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        if (verbose) {
+            console.log(`Processing complete! Run ID: ${result.body.runId}`);
+            console.log(`Retrieving audio with output type: ${outputType}`);
         }
 
-        throw new Error(`TTS request did not complete within ${timeout} seconds`);
+        if (outputType === OutputType.RawBytes) {
+            // Use raw method for binary data
+            const response = await this.getTtsRunInfoByIdRaw(result.body.runId!, outputType);
+
+            if (saveToFile) {
+                try {
+                    fs.writeFileSync(saveToFile, response.body);
+                    if (verbose) {
+                        console.log(`Audio saved to file: ${saveToFile}`);
+                    }
+                    return `Audio saved to ${saveToFile}`;
+                } catch (error: any) {
+                    throw new Error(`Failed to save audio to file: ${error.message}`);
+                }
+            }
+
+            return response.body;
+        } else {
+            const response = await this.getTtsRunInfoById(result.body.runId!, outputType);
+            return response.body;
+        }
     }
 }
