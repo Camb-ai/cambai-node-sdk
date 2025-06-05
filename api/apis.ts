@@ -1,5 +1,5 @@
 export * from './apisApi';
-import { ApisApi } from './apisApi';
+import { CambAI } from './apisApi';
 export * from './audioSeparationApi';
 import { AudioSeparationApi } from './audioSeparationApi';
 export * from './dictionariesApi';
@@ -25,4 +25,4 @@ export class HttpError extends Error {
 
 export { RequestFile } from '../model/models';
 
-export const APIS = [ApisApi, AudioSeparationApi, DictionariesApi, DubApi, StoriesApi, TextToAudioApi, TextToSpeechApi, TextToVoiceApi];
+export const APIS = [CambAI, AudioSeparationApi, DictionariesApi, DubApi, StoriesApi, TextToAudioApi, TextToSpeechApi, TextToVoiceApi];
