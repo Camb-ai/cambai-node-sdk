@@ -1017,11 +1017,7 @@ export class CambAI {
             });
         });
     }
-    /**
-     * Stream text-to-speech audio in real-time
-     * @summary Create TTS Stream
-     * @param createTTSStreamRequestPayload 
-     */
+
     /**
      * 
      * @summary Create Voice from Description
