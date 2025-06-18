@@ -2,7 +2,6 @@
 
 [![npm version](https://img.shields.io/npm/v/cambai.svg?style=flat-square)](https://www.npmjs.com/package/cambai)
 [![License](https://img.shields.io/npm/l/cambai.svg?style=flat-square)](https://github.com/Camb-ai/camb_ai_nodejs_sdk/blob/main/LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Camb-ai/camb_ai_nodejs_sdk/node.js.yml?branch=main&style=flat-square)](https://github.com/Camb-ai/camb_ai_nodejs_sdk/actions)
 
 The official Node.js SDK for interacting with Camb AI's powerful voice and audio generation APIs. Create expressive speech, unique voices, and rich soundscapes with just a few lines of JavaScript.
 
