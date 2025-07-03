@@ -122,7 +122,9 @@ You can list available voices to find a `voiceId` that suits your needs:
 ```javascript
 async function listVoices() {
   try {
-    const voices = await client.listVoices();
+    const response = await client.listVoices();
+    const voices = response.body;
+    console.log("Available voices:", voices);
     console.log(`Found ${voices.length} voices:`);
     
     // Print first 5 as an example
@@ -135,6 +137,56 @@ async function listVoices() {
 }
 
 listVoices();
+```
+#### List Available Source Languages
+
+Use this function to fetch and view all available source languages.
+
+```javascript
+async function listSource() {  
+try {
+    const response = await client.getSourceLanguages();
+    const source = response.body;
+    console.log("Available Source Languages:", source);
+    console.log(`Found ${source.length} voices:`);
+
+    // Print first 5 as an example
+    source.slice(0, source.length).forEach((lang) => {
+      console.log(
+        `  - ID: ${lang.id}, Name: ${lang.shortName}, Language: ${lang.language}`
+      );
+    });
+  } catch (error) {
+    console.error("Could not list source languages:", error);
+  }
+}
+
+listSource();
+```
+#### List Available Target Languages
+
+Use this function to fetch and view all available target languages.
+
+```javascript
+async function listTarget() {
+  try {
+    const response = await client.getTargetLanguages();
+    const target = response.body;
+    console.log("Available Target Languages:", target);
+    console.log(`Found ${target.length} voices:`);
+
+    // Print first 5 as an example
+    target.slice(0, target.length).forEach((lang) => {
+      console.log(
+        `  - ID: ${lang.id}, Name: ${lang.shortName}, Language: ${lang.language}`
+      );
+    });
+  } catch (error) {
+    console.error("Could not list target languages:", error);
+  }
+}
+
+listTarget();
 ```
 
 ---
@@ -156,14 +208,14 @@ async function generateVoice() {
     
     // Generate a voice from description
     const result = await client.textToVoice(
-      "Crafting a unique voice with a hint of mystery and warmth.",
-      "A smooth, baritone voice with a slight echo, perfect for storytelling.",
+      "Crafting a truly unique and captivating voice that carries a subtle air of mystery, depth, and gentle warmth.", // Minimum length of text is 100 characters
+      "A smooth, rich baritone voice layered with a soft echo, ideal for immersive storytelling and emotional depth.",
       60,  // Timeout in seconds
       true  // Verbose logging
     );
     
     console.log("Voice generation complete!");
-    console.log("Sample URLs:", result.sampleUrls);
+    console.log("Sample URLs:", result.previews);
     
   } catch (error) {
     console.error("Error generating voice:", error);
@@ -209,6 +261,58 @@ async function generateSoundEffect() {
 
 generateSoundEffect();
 ```
+
+---
+
+### 4. End-to-End Dubbing
+
+Dub your videos into multiple languages with voice cloning. This is a convenience method that handles the entire dubbing workflow automatically.
+
+```javascript
+const { CambAI, ApiKey, Languages } = require('cambai');
+
+// Initialize client
+const client = new CambAI();
+client.setApiKey(ApiKey.APIKeyHeader, "YOUR_CAMB_AI_API_KEY");
+
+async function dubVideo() {
+  try {
+    console.log("Starting end-to-end dubbing...");
+    
+    const result = await client.endToEndDubbing(
+      "https://youtube.com/example-url",  // Video URL
+      Languages.NUMBER_1,  // Source language (English)
+      [Languages.NUMBER_81],  // Target languages (Hindi)
+      300,  // Timeout in seconds
+      true  // Verbose logging
+    );
+    
+    console.log("Dubbing complete!");
+    console.log("Result:", result);
+    
+    // The result typically contains URLs to the dubbed audio/video files
+    if (result.outputVideoUrl) {
+      console.log("Dubbed video URL:", result.outputVideoUrl);
+    }
+    if (result.outputAudioUrl) {
+      console.log("Dubbed audio URL:", result.outputAudioUrl);
+    }
+    
+  } catch (error) {
+    console.error("Error during dubbing:", error);
+  }
+}
+
+dubVideo();
+```
+
+#### Parameters
+
+- **videoUrl** (string, required): The URL of the media file to be dubbed
+- **sourceLanguage** (Languages, required): The original language of the media file
+- **targetLanguages** (Array<Languages>, optional): The list of desired languages for dubbing
+- **timeout** (number, optional): Maximum wait time in seconds (default: 300)
+- **verbose** (boolean, optional): Enable status logging (default: false)
 
 ---
 

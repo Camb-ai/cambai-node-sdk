@@ -3083,4 +3083,82 @@ export class CambAI {
             return response.body;
         }
     }
+
+    /**
+     * End-to-end dubbing convenience method that combines createEndToEndDubbing, 
+     * getEndToEndDubbingStatusById, and getDubbedRunInfoById into a single call.
+     *
+     * This is a convenience method that handles the entire dubbing workflow automatically.
+     *
+     * @param videoUrl The URL of the media file to be used for the end-to-end dubbing task
+     * @param sourceLanguage The original language of the media file
+     * @param targetLanguages The list of desired languages that the media file will be dubbed to
+     * @param timeout Maximum time to wait for processing in seconds (default: 300)
+     * @param verbose Whether to print status updates during processing
+     *
+     * @returns A dictionary containing the dubbing result, typically including URLs to the generated audio files
+     *
+     * @throws Error if there's an error with the API call
+     * @throws Error if the processing doesn't complete within the timeout period
+     * @throws Error if the dubbing process fails
+     */
+    public async endToEndDubbing(
+        videoUrl: string,
+        sourceLanguage: Languages,
+        targetLanguages?: Array<Languages>,
+        timeout: number = 300,
+        verbose: boolean = false
+    ): Promise<any> {
+        // Create the request payload
+        const requestPayload = new EndToEndDubbingRequestPayload();
+        requestPayload.videoUrl = videoUrl;
+        requestPayload.sourceLanguage = sourceLanguage;
+        if (targetLanguages) {
+            requestPayload.targetLanguages = targetLanguages;
+        }
+
+        if (verbose) {
+            console.log(`Submitting end-to-end dubbing request for video: '${videoUrl}'`);
+            console.log(`Source language: ${sourceLanguage}, Target languages: ${targetLanguages ? targetLanguages.join(', ') : 'default'}`);
+        }
+
+        const taskIdObj = await this.createEndToEndDubbing(requestPayload);
+        const taskIdStr = taskIdObj.body.taskId!;
+
+        if (verbose) {
+            console.log(`Request submitted. Task ID: ${taskIdStr}`);
+            console.log(`Waiting for processing to complete (timeout: ${timeout} seconds)...`);
+        }
+
+        // Use the polling function to wait for completion
+        const result = await this.pollForCompletion(
+            () => this.getEndToEndDubbingStatusById(taskIdStr),
+            (result) => result.body.runId !== undefined && (
+                result.body.status === TaskStatus.Success ||
+                result.body.status === TaskStatus.Error ||
+                result.body.status === TaskStatus.Timeout ||
+                result.body.status === TaskStatus.PaymentRequired
+            ),
+            timeout,
+            verbose,
+            "End-to-end dubbing request"
+        );
+
+        // Check if the task completed successfully
+        if (result.body.status === TaskStatus.Error) {
+            throw new Error(`End-to-end dubbing failed with ERROR status. Task ID: ${taskIdStr}`);
+        } else if (result.body.status === TaskStatus.Timeout) {
+            throw new Error(`End-to-end dubbing failed with TIMEOUT status. Task ID: ${taskIdStr}`);
+        } else if (result.body.status === TaskStatus.PaymentRequired) {
+            throw new Error(`End-to-end dubbing failed with PAYMENT_REQUIRED status. Task ID: ${taskIdStr}`);
+        }
+
+        if (verbose) {
+            console.log(`Processing complete! Run ID: ${result.body.runId}`);
+            console.log(`Retrieving dubbing result...`);
+        }
+
+        const response = await this.getDubbedRunInfoById(result.body.runId!);
+        return response.body;
+    }
 }
