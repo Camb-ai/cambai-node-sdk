@@ -21,11 +21,11 @@ export class RunInfoResponse {
     /**
     * The URL pointing to the generated dubbed video file.
     */
-    'outputVideoUrl'?: string;
+    'videoUrl'?: string;
     /**
     * The URL pointing to the generated dubbed audio file.
     */
-    'outputAudioUrl'?: string;
+    'audioUrl'?: string;
     /**
     * A collection of dialogue items representing the textual transcript of the dubbed output.
     */
@@ -40,13 +40,13 @@ export class RunInfoResponse {
             "type": "number"
         },
         {
-            "name": "outputVideoUrl",
-            "baseName": "output_video_url",
+            "name": "videoUrl",
+            "baseName": "video_url",
             "type": "string"
         },
         {
-            "name": "outputAudioUrl",
-            "baseName": "output_audio_url",
+            "name": "audioUrl",
+            "baseName": "audio_url",
             "type": "string"
         },
         {
