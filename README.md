@@ -20,6 +20,7 @@ The official TypeScript SDK for interacting with Camb AI's powerful voice and au
 - **Expressive Text-to-Speech**: Convert text into natural-sounding speech using a wide range of pre-existing voices.
 - **Generative Voices**: Create entirely new, unique voices from text prompts and descriptions.
 - **Soundscapes from Text**: Generate ambient audio and sound effects from textual descriptions.
+- **Transcripts & Subtitles**: Create async transcription/subtitle jobs and export TXT, SRT, or VTT results as raw data or files.
 - **Live Transcription**: Stream microphone (browser or Node) or file audio over a WebSocket and receive cumulative interim transcripts, word-level timing, and typed events.
 - **Realtime Speech-to-Speech Translation**: Stream speech over a WebSocket and receive the translation as live text and synthesized speech.
 - Access to voice cloning, translation, and more (refer to full API documentation).
@@ -282,7 +283,48 @@ while (true) {
 }
 ```
 
-### 5. Live Transcription (Streaming WebSocket)
+### 5. Transcription & Subtitles
+
+Use transcription when you need a source-language transcript. Use subtitles
+when you also need translated subtitle output. Subtitle create requires a
+publicly accessible `media_url` (JSON body; file upload is not supported).
+Both support formatted TXT, SRT, and VTT exports.
+
+```javascript
+const transcription = await client.transcription.createTranscription({
+  language: CambApi.Languages.EN_US,
+  media_url: "your_accessible_media_url",
+  formatting_options: {
+    max_segment_duration_in_seconds: 7,
+    min_segment_duration_in_seconds: 1,
+    max_characters_in_segment: 42,
+  },
+});
+
+const transcript = await client.transcription.getTranscriptionResult({
+  run_id: 123,
+  format_type: CambApi.TranscriptFileFormat.Srt,
+  data_type: CambApi.TranscriptDataType.RawData,
+});
+
+const subtitleTask = await client.subtitles.createSubtitle({
+  source_language: CambApi.Languages.EN_US,
+  target_languages: [CambApi.Languages.ES_ES],
+  media_url: "your_accessible_media_url",
+});
+
+const subtitles = await client.subtitles.getSubtitleResultForLanguage({
+  run_id: 123,
+  language: CambApi.Languages.ES_ES,
+  format_type: CambApi.TranscriptFileFormat.Vtt,
+  data_type: CambApi.TranscriptDataType.RawData,
+});
+```
+
+See [`examples/transcription.js`](examples/transcription.js) and
+[`examples/subtitles.js`](examples/subtitles.js) for complete polling examples.
+
+### 6. Live Transcription (Streaming WebSocket)
 
 Stream audio over a single WebSocket and receive cumulative interim
 transcripts, word-level timing, and typed events. The session ships a
@@ -340,7 +382,7 @@ For the full event catalog (`Ready`, `Results`, `Final`, `Error`,
 [Live Transcription tutorial](https://docs.camb.ai/tutorials/live-transcription-with-sdk)
 and [SDK guide](https://docs.camb.ai/sdk-guides/live-transcription).
 
-### 6. Realtime Speech-to-Speech Translation (Streaming WebSocket)
+### 7. Realtime Speech-to-Speech Translation (Streaming WebSocket)
 
 Speak (or stream a file) in one language and receive the translation as live
 text and synthesized speech over a single WebSocket. Audio is PCM16 mono at
@@ -388,8 +430,8 @@ The Camb AI SDK offers a wide range of capabilities beyond these examples, inclu
 - Translated TTS
 - Audio Dubbing
 - Transcription (async file/URL jobs)
-- Live Transcription (streaming WebSocket — see Example 5 above)
-- Realtime Speech-to-Speech Translation (streaming WebSocket — see Example 6 above)
+- Live Transcription (streaming WebSocket — see Example 6 above)
+- Realtime Speech-to-Speech Translation (streaming WebSocket — see Example 7 above)
 - And more!
 
 Please refer to the [Official Camb AI API Documentation](https://docs.camb.ai) for a comprehensive list of features and advanced usage patterns.
@@ -420,6 +462,8 @@ Check out the `examples/` directory for complete, runnable examples:
 - `basic-tts.js` - Basic text-to-speech example
 - `text-to-audio.js` - Sound generation example
 - `dubbing.js` - Video dubbing workflow
+- `transcription.js` - Async transcription with formatting options and TXT/SRT/VTT exports
+- `subtitles.js` - Subtitle job creation, polling, and language-specific TXT/SRT/VTT exports
 - `baseten-provider.js` - Using custom hosting providers
 - `live-transcription-microphone.js` - Stream microphone audio over the WebSocket (uses `node-record-lpcm16`)
 - `live-transcription-file.js` - Stream a local WAV at real-time pace (no audio device required)

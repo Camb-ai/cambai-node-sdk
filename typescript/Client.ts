@@ -11,6 +11,7 @@ import { LanguagesClient } from "./api/resources/languages/client/Client.js";
 import { ProjectSetupClient } from "./api/resources/projectSetup/client/Client.js";
 import { StoryClient } from "./api/resources/story/client/Client.js";
 import { StreamingClient } from "./api/resources/streaming/client/Client.js";
+import { SubtitlesClient } from "./api/resources/subtitles/client/Client.js";
 import { TextToAudioClient } from "./api/resources/textToAudio/client/Client.js";
 import { TextToSpeechClient } from "./api/resources/textToSpeech/client/Client.js";
 import { TextToVoiceClient } from "./api/resources/textToVoice/client/Client.js";
@@ -44,6 +45,7 @@ export class CambClient {
     protected _textToAudio: TextToAudioClient | undefined;
     protected _textToVoice: TextToVoiceClient | undefined;
     protected _textToSpeech: TextToSpeechClient | undefined;
+    protected _subtitles: SubtitlesClient | undefined;
     protected _translation: TranslationClient | undefined;
     protected _transcription: TranscriptionClient | undefined;
     protected _translatedTts: TranslatedTtsClient | undefined;
@@ -93,6 +95,10 @@ export class CambClient {
 
     public get textToSpeech(): TextToSpeechClient {
         return (this._textToSpeech ??= new TextToSpeechClient(this._options));
+    }
+
+    public get subtitles(): SubtitlesClient {
+        return (this._subtitles ??= new SubtitlesClient(this._options));
     }
 
     public get translation(): TranslationClient {

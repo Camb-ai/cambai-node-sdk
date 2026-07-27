@@ -18,6 +18,8 @@ export * as story from "./story/index.js";
 export * from "./story/types/index.js";
 export * from "./streaming/client/requests/index.js";
 export * as streaming from "./streaming/index.js";
+export * from "./subtitles/client/requests/index.js";
+export * as subtitles from "./subtitles/index.js";
 export * from "./textToAudio/client/requests/index.js";
 export * as textToAudio from "./textToAudio/index.js";
 export * from "./textToSpeech/client/requests/index.js";
