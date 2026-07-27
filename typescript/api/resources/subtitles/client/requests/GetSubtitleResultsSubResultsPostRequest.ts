@@ -3,10 +3,12 @@
 import type * as CambApi from "../../../../index.js";
 
 /**
+ * `body.run_ids` must contain 2–5 unique IDs. For a single run, use `getSubtitleResult`.
+ *
  * @example
  *     {
  *         body: {
- *             run_ids: [1]
+ *             run_ids: [12345, 12346]
  *         }
  *     }
  */

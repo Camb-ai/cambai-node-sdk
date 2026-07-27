@@ -332,10 +332,12 @@ export class SubtitlesClient {
      *
      * @throws {@link CambApi.UnprocessableEntityError}
      *
+     * `run_ids` must contain 2–5 unique IDs. For a single run, use {@link getSubtitleResult}.
+     *
      * @example
      *     await client.subtitles.getSubtitleResults({
      *         body: {
-     *             run_ids: [1]
+     *             run_ids: [12345, 12346]
      *         }
      *     })
      */
