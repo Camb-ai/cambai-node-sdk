@@ -9,96 +9,48 @@ import { handleNonStatusCodeError } from "../../../../errors/handleNonStatusCode
 import * as errors from "../../../../errors/index.js";
 import * as CambApi from "../../../index.js";
 
-export declare namespace TranscriptionClient {
+export declare namespace SubtitlesClient {
     export type Options = BaseClientOptions;
 
     export interface RequestOptions extends BaseRequestOptions {}
 }
 
-export class TranscriptionClient {
-    protected readonly _options: NormalizedClientOptionsWithAuth<TranscriptionClient.Options>;
+export class SubtitlesClient {
+    protected readonly _options: NormalizedClientOptionsWithAuth<SubtitlesClient.Options>;
 
-    constructor(options: TranscriptionClient.Options) {
+    constructor(options: SubtitlesClient.Options) {
         this._options = normalizeClientOptionsWithAuth(options);
     }
 
     /**
-     * @param {CambApi.BodyCreateTranscriptionTranscribePost} request
-     * @param {TranscriptionClient.RequestOptions} requestOptions - Request-specific configuration.
+     * @param {CambApi.BodyCreateSubtitleSubPost} request
+     * @param {SubtitlesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link CambApi.UnprocessableEntityError}
      *
      * @example
-     *     import { createReadStream } from "fs";
-     *     await client.transcription.createTranscription({
-     *         language: 1
+     *     await client.subtitles.createSubtitle({
+     *         source_language: 1,
+     *         media_url: "https://example.com/audio.mp3",
+     *         target_languages: [1]
      *     })
      */
-    public createTranscription(
-        request: CambApi.BodyCreateTranscriptionTranscribePost,
-        requestOptions?: TranscriptionClient.RequestOptions,
+    public createSubtitle(
+        request: CambApi.BodyCreateSubtitleSubPost,
+        requestOptions?: SubtitlesClient.RequestOptions,
     ): core.HttpResponsePromise<CambApi.OrchestratorPipelineCallResult> {
-        return core.HttpResponsePromise.fromPromise(this.__createTranscription(request, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__createSubtitle(request, requestOptions));
     }
 
-    private async __createTranscription(
-        request: CambApi.BodyCreateTranscriptionTranscribePost,
-        requestOptions?: TranscriptionClient.RequestOptions,
+    private async __createSubtitle(
+        request: CambApi.BodyCreateSubtitleSubPost,
+        requestOptions?: SubtitlesClient.RequestOptions,
     ): Promise<core.WithRawResponse<CambApi.OrchestratorPipelineCallResult>> {
-        const _queryParams: Record<string, string | string[] | object | object[] | null> = {};
-        if (request.run_id !== undefined) {
-            _queryParams.run_id = request.run_id?.toString() ?? null;
-        }
-
-        const _request = await core.newFormData();
-        _request.append("language", request.language.toString());
-        if (request.media_file != null) {
-            await _request.appendFile("media_file", request.media_file);
-        }
-
-        if (request.media_url != null) {
-            _request.append("media_url", request.media_url);
-        }
-
-        if (request.file != null) {
-            await _request.appendFile("file", request.file);
-        }
-
-        if (request.audio_url != null) {
-            _request.append("audio_url", request.audio_url);
-        }
-
-        if (request.project_name != null) {
-            _request.append("project_name", request.project_name);
-        }
-
-        if (request.project_description != null) {
-            _request.append("project_description", request.project_description);
-        }
-
-        if (request.folder_id != null) {
-            _request.append("folder_id", request.folder_id?.toString() ?? null);
-        }
-
-        if (request.transcription_mode != null) {
-            _request.append("transcription_mode", request.transcription_mode);
-        }
-
-        if (request.formatting_options != null) {
-            _request.append(
-                "formatting_options",
-                typeof request.formatting_options === "string"
-                    ? request.formatting_options
-                    : JSON.stringify(request.formatting_options),
-            );
-        }
-
-        const _maybeEncodedRequest = await _request.getRequest();
+        const _body = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
             this._options?.headers,
-            mergeOnlyDefinedHeaders({ ..._maybeEncodedRequest.headers }),
             requestOptions?.headers,
         );
         const _response = await core.fetcher({
@@ -106,14 +58,14 @@ export class TranscriptionClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.CambApiEnvironment.Default,
-                "transcribe",
+                "sub",
             ),
             method: "POST",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
-            requestType: "file",
-            duplex: _maybeEncodedRequest.duplex,
-            body: _maybeEncodedRequest.body,
+            contentType: "application/json",
+            queryParameters: requestOptions?.queryParams,
+            requestType: "json",
+            body: _body,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 300) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -143,37 +95,32 @@ export class TranscriptionClient {
             }
         }
 
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/transcribe");
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/sub");
     }
 
     /**
-     * @param {CambApi.GetTranscriptionTaskStatusTranscribeTaskIdGetRequest} request
-     * @param {TranscriptionClient.RequestOptions} requestOptions - Request-specific configuration.
+     * @param {CambApi.GetSubtitleTaskStatusSubTaskIdGetRequest} request
+     * @param {SubtitlesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link CambApi.UnprocessableEntityError}
      *
      * @example
-     *     await client.transcription.getTranscriptionTaskStatus({
+     *     await client.subtitles.getSubtitleTaskStatus({
      *         task_id: "task_id"
      *     })
      */
-    public getTranscriptionTaskStatus(
-        request: CambApi.GetTranscriptionTaskStatusTranscribeTaskIdGetRequest,
-        requestOptions?: TranscriptionClient.RequestOptions,
+    public getSubtitleTaskStatus(
+        request: CambApi.GetSubtitleTaskStatusSubTaskIdGetRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
     ): core.HttpResponsePromise<CambApi.OrchestratorPipelineResult> {
-        return core.HttpResponsePromise.fromPromise(this.__getTranscriptionTaskStatus(request, requestOptions));
+        return core.HttpResponsePromise.fromPromise(this.__getSubtitleTaskStatus(request, requestOptions));
     }
 
-    private async __getTranscriptionTaskStatus(
-        request: CambApi.GetTranscriptionTaskStatusTranscribeTaskIdGetRequest,
-        requestOptions?: TranscriptionClient.RequestOptions,
+    private async __getSubtitleTaskStatus(
+        request: CambApi.GetSubtitleTaskStatusSubTaskIdGetRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
     ): Promise<core.WithRawResponse<CambApi.OrchestratorPipelineResult>> {
-        const { task_id: taskId, run_id: runId } = request;
-        const _queryParams: Record<string, string | string[] | object | object[] | null> = {};
-        if (runId !== undefined) {
-            _queryParams.run_id = runId?.toString() ?? null;
-        }
-
+        const { task_id: taskId } = request;
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
         const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
             _authRequest.headers,
@@ -185,11 +132,11 @@ export class TranscriptionClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.CambApiEnvironment.Default,
-                `transcribe/${core.url.encodePathParam(taskId)}`,
+                `sub/${core.url.encodePathParam(taskId)}`,
             ),
             method: "GET",
             headers: _headers,
-            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
+            queryParameters: requestOptions?.queryParams,
             timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 300) * 1000,
             maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
             abortSignal: requestOptions?.abortSignal,
@@ -216,45 +163,33 @@ export class TranscriptionClient {
             }
         }
 
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/transcribe/{task_id}");
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/sub/{task_id}");
     }
 
     /**
-     * NOTE: This endpoint should be called only by the users to get values for their runs via API.
-     * Further we need to validate if the user has access to the run_id, otherwise we should not return the output urls.
-     *
-     * @param {CambApi.GetTranscriptionResultTranscriptionResultRunIdGetRequest} request
-     * @param {TranscriptionClient.RequestOptions} requestOptions - Request-specific configuration.
+     * @param {CambApi.GetSubtitleResultSubResultRunIdGetRequest} request
+     * @param {SubtitlesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link CambApi.UnprocessableEntityError}
      *
      * @example
-     *     await client.transcription.getTranscriptionResult({
+     *     await client.subtitles.getSubtitleResult({
      *         run_id: 1
      *     })
      */
-    public getTranscriptionResult(
-        request: CambApi.GetTranscriptionResultTranscriptionResultRunIdGetRequest,
-        requestOptions?: TranscriptionClient.RequestOptions,
-    ): core.HttpResponsePromise<CambApi.TranscriptionResult | CambApi.TranscriptExportResult> {
-        return core.HttpResponsePromise.fromPromise(this.__getTranscriptionResult(request, requestOptions));
+    public getSubtitleResult(
+        request: CambApi.GetSubtitleResultSubResultRunIdGetRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
+    ): core.HttpResponsePromise<CambApi.SubtitleResultResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__getSubtitleResult(request, requestOptions));
     }
 
-    private async __getTranscriptionResult(
-        request: CambApi.GetTranscriptionResultTranscriptionResultRunIdGetRequest,
-        requestOptions?: TranscriptionClient.RequestOptions,
-    ): Promise<core.WithRawResponse<CambApi.TranscriptionResult | CambApi.TranscriptExportResult>> {
-        const {
-            run_id: runId,
-            word_level_timestamps: wordLevelTimestamps,
-            format_type: formatType,
-            data_type: dataType,
-        } = request;
+    private async __getSubtitleResult(
+        request: CambApi.GetSubtitleResultSubResultRunIdGetRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
+    ): Promise<core.WithRawResponse<CambApi.SubtitleResultResponse>> {
+        const { run_id: runId, format_type: formatType, data_type: dataType } = request;
         const _queryParams: Record<string, string | string[] | object | object[] | null> = {};
-        if (wordLevelTimestamps !== undefined) {
-            _queryParams.word_level_timestamps = wordLevelTimestamps?.toString() ?? null;
-        }
-
         if (formatType != null) {
             _queryParams.format_type = formatType;
         }
@@ -274,7 +209,7 @@ export class TranscriptionClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.CambApiEnvironment.Default,
-                `transcription-result/${core.url.encodePathParam(runId)}`,
+                `sub-result/${core.url.encodePathParam(runId)}`,
             ),
             method: "GET",
             headers: _headers,
@@ -286,10 +221,85 @@ export class TranscriptionClient {
             logging: this._options.logging,
         });
         if (_response.ok) {
-            return {
-                data: _response.body as CambApi.TranscriptionResult | CambApi.TranscriptExportResult,
-                rawResponse: _response.rawResponse,
-            };
+            return { data: _response.body as CambApi.SubtitleResultResponse, rawResponse: _response.rawResponse };
+        }
+
+        if (_response.error.reason === "status-code") {
+            switch (_response.error.statusCode) {
+                case 422:
+                    throw new CambApi.UnprocessableEntityError(
+                        _response.error.body as CambApi.HttpValidationError,
+                        _response.rawResponse,
+                    );
+                default:
+                    throw new errors.CambApiError({
+                        statusCode: _response.error.statusCode,
+                        body: _response.error.body,
+                        rawResponse: _response.rawResponse,
+                    });
+            }
+        }
+
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "GET", "/sub-result/{run_id}");
+    }
+
+    /**
+     * @param {CambApi.GetSubtitleResultForLanguageSubResultRunIdLanguageGetRequest} request
+     * @param {SubtitlesClient.RequestOptions} requestOptions - Request-specific configuration.
+     *
+     * @throws {@link CambApi.UnprocessableEntityError}
+     *
+     * @example
+     *     await client.subtitles.getSubtitleResultForLanguage({
+     *         run_id: 1,
+     *         language: 1
+     *     })
+     */
+    public getSubtitleResultForLanguage(
+        request: CambApi.GetSubtitleResultForLanguageSubResultRunIdLanguageGetRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
+    ): core.HttpResponsePromise<CambApi.SubtitleResultResponse> {
+        return core.HttpResponsePromise.fromPromise(this.__getSubtitleResultForLanguage(request, requestOptions));
+    }
+
+    private async __getSubtitleResultForLanguage(
+        request: CambApi.GetSubtitleResultForLanguageSubResultRunIdLanguageGetRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
+    ): Promise<core.WithRawResponse<CambApi.SubtitleResultResponse>> {
+        const { run_id: runId, language, format_type: formatType, data_type: dataType } = request;
+        const _queryParams: Record<string, string | string[] | object | object[] | null> = {};
+        if (formatType != null) {
+            _queryParams.format_type = formatType;
+        }
+
+        if (dataType != null) {
+            _queryParams.data_type = dataType;
+        }
+
+        const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
+        const _headers: core.Fetcher.Args["headers"] = mergeHeaders(
+            _authRequest.headers,
+            this._options?.headers,
+            requestOptions?.headers,
+        );
+        const _response = await core.fetcher({
+            url: core.url.join(
+                (await core.Supplier.get(this._options.baseUrl)) ??
+                    (await core.Supplier.get(this._options.environment)) ??
+                    environments.CambApiEnvironment.Default,
+                `sub-result/${core.url.encodePathParam(runId)}/${core.url.encodePathParam(language)}`,
+            ),
+            method: "GET",
+            headers: _headers,
+            queryParameters: { ..._queryParams, ...requestOptions?.queryParams },
+            timeoutMs: (requestOptions?.timeoutInSeconds ?? this._options?.timeoutInSeconds ?? 300) * 1000,
+            maxRetries: requestOptions?.maxRetries ?? this._options?.maxRetries,
+            abortSignal: requestOptions?.abortSignal,
+            fetchFn: this._options?.fetch,
+            logging: this._options.logging,
+        });
+        if (_response.ok) {
+            return { data: _response.body as CambApi.SubtitleResultResponse, rawResponse: _response.rawResponse };
         }
 
         if (_response.error.reason === "status-code") {
@@ -312,38 +322,44 @@ export class TranscriptionClient {
             _response.error,
             _response.rawResponse,
             "GET",
-            "/transcription-result/{run_id}",
+            "/sub-result/{run_id}/{language}",
         );
     }
 
     /**
-     * @param {CambApi.GetTranscriptionResultsTranscriptionResultsPostRequest} request
-     * @param {TranscriptionClient.RequestOptions} requestOptions - Request-specific configuration.
+     * @param {CambApi.GetSubtitleResultsSubResultsPostRequest} request
+     * @param {SubtitlesClient.RequestOptions} requestOptions - Request-specific configuration.
      *
      * @throws {@link CambApi.UnprocessableEntityError}
      *
+     * `run_ids` must contain 2–5 unique IDs. For a single run, use {@link getSubtitleResult}.
+     *
      * @example
-     *     await client.transcription.getTranscriptionResults({
+     *     await client.subtitles.getSubtitleResults({
      *         body: {
-     *             run_ids: [1]
+     *             run_ids: [12345, 12346]
      *         }
      *     })
      */
-    public getTranscriptionResults(
-        request: CambApi.GetTranscriptionResultsTranscriptionResultsPostRequest,
-        requestOptions?: TranscriptionClient.RequestOptions,
-    ): core.HttpResponsePromise<Record<string, CambApi.TranscriptionResult>> {
-        return core.HttpResponsePromise.fromPromise(this.__getTranscriptionResults(request, requestOptions));
+    public getSubtitleResults(
+        request: CambApi.GetSubtitleResultsSubResultsPostRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
+    ): core.HttpResponsePromise<Record<string, CambApi.SubtitleResultResponse>> {
+        return core.HttpResponsePromise.fromPromise(this.__getSubtitleResults(request, requestOptions));
     }
 
-    private async __getTranscriptionResults(
-        request: CambApi.GetTranscriptionResultsTranscriptionResultsPostRequest,
-        requestOptions?: TranscriptionClient.RequestOptions,
-    ): Promise<core.WithRawResponse<Record<string, CambApi.TranscriptionResult>>> {
-        const { run_id: runId, traceparent, body: _body } = request;
+    private async __getSubtitleResults(
+        request: CambApi.GetSubtitleResultsSubResultsPostRequest,
+        requestOptions?: SubtitlesClient.RequestOptions,
+    ): Promise<core.WithRawResponse<Record<string, CambApi.SubtitleResultResponse>>> {
+        const { traceparent, format_type: formatType, data_type: dataType, body: _body } = request;
         const _queryParams: Record<string, string | string[] | object | object[] | null> = {};
-        if (runId !== undefined) {
-            _queryParams.run_id = runId?.toString() ?? null;
+        if (formatType != null) {
+            _queryParams.format_type = formatType;
+        }
+
+        if (dataType != null) {
+            _queryParams.data_type = dataType;
         }
 
         const _authRequest: core.AuthRequest = await this._options.authProvider.getAuthRequest();
@@ -358,7 +374,7 @@ export class TranscriptionClient {
                 (await core.Supplier.get(this._options.baseUrl)) ??
                     (await core.Supplier.get(this._options.environment)) ??
                     environments.CambApiEnvironment.Default,
-                "transcription-results",
+                "sub-results",
             ),
             method: "POST",
             headers: _headers,
@@ -374,7 +390,7 @@ export class TranscriptionClient {
         });
         if (_response.ok) {
             return {
-                data: _response.body as Record<string, CambApi.TranscriptionResult>,
+                data: _response.body as Record<string, CambApi.SubtitleResultResponse>,
                 rawResponse: _response.rawResponse,
             };
         }
@@ -395,6 +411,6 @@ export class TranscriptionClient {
             }
         }
 
-        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/transcription-results");
+        return handleNonStatusCodeError(_response.error, _response.rawResponse, "POST", "/sub-results");
     }
 }

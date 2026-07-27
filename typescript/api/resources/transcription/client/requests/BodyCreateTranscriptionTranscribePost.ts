@@ -26,4 +26,5 @@ export interface BodyCreateTranscriptionTranscribePost {
     folder_id?: number | null;
     /** Transcription mode: `fast` (default) or `slow` for a more thorough pass. */
     transcription_mode?: "fast" | "slow" | null;
+    formatting_options?: CambApi.SubtitleFormattingOptions | string | null;
 }
