@@ -25,7 +25,7 @@ export {
     RealtimeClient,
     RealtimeConnectError,
     RealtimeError,
-    RealtimeModel,
+    RealtimeMode,
     RealtimeProtocolError,
     RealtimeSession,
     ServerEventType as RealtimeServerEventType,
