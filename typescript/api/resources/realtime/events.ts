@@ -13,10 +13,16 @@ export enum ServerEventType {
     SessionStarting = "session.starting",
     SessionCreated = "session.created",
     SessionUpdated = "session.updated",
+    TranscriptDelta = "conversation.item.input_audio_transcription.delta",
     TranscriptCompleted = "conversation.item.input_audio_transcription.completed",
     TextDelta = "response.text.delta",
     TextDone = "response.text.done",
-    /** Handled manually — binary frame or base64 JSON delta. */
+    /**
+     * Synthetic, like `Closed`: the server frames output audio as raw binary WebSocket frames,
+     * never as a JSON event. The read loop turns each binary frame into this event. A base64 JSON
+     * form is also accepted under this name, which no server version sends — kept only so a future
+     * server could introduce it without breaking older clients.
+     */
     AudioDelta = "response.audio.delta",
     AudioDone = "response.audio.done",
     Error = "error",
@@ -30,17 +36,23 @@ export interface SessionStartingEvent {
 
 export interface SessionInfo {
     id: string;
-    model: string;
+    mode: string;
     sourceLanguage: string;
     targetLanguage: string;
     outputModalities: string[];
+    /**
+     * Resolved voice, e.g. `{ type: "cloned", voice_id: 123 }`. Omitted by the server
+     * (`undefined` here) when the default built-in voice is used.
+     */
+    voice?: Record<string, unknown>;
 }
 
 export interface SessionConfig {
-    model?: string;
+    mode?: string;
     sourceLanguage: string;
     targetLanguage: string;
     outputModalities: string[];
+    voice?: Record<string, unknown>;
 }
 
 export interface SessionCreatedEvent {
@@ -51,6 +63,18 @@ export interface SessionCreatedEvent {
 export interface SessionUpdatedEvent {
     readonly type: ServerEventType.SessionUpdated;
     session: SessionConfig;
+}
+
+/**
+ * Incremental transcript of what the user is saying, in the source language.
+ *
+ * Deltas are additive within one utterance and reset after the corresponding
+ * `TranscriptCompletedEvent`. This is the live source-transcript stream — the counterpart to
+ * `TextDeltaEvent`, which carries the translation.
+ */
+export interface TranscriptDeltaEvent {
+    readonly type: ServerEventType.TranscriptDelta;
+    delta: string;
 }
 
 export interface TranscriptCompletedEvent {
@@ -99,6 +123,7 @@ export interface ServerEventPayloads {
     [ServerEventType.SessionStarting]: SessionStartingEvent;
     [ServerEventType.SessionCreated]: SessionCreatedEvent;
     [ServerEventType.SessionUpdated]: SessionUpdatedEvent;
+    [ServerEventType.TranscriptDelta]: TranscriptDeltaEvent;
     [ServerEventType.TranscriptCompleted]: TranscriptCompletedEvent;
     [ServerEventType.TextDelta]: TextDeltaEvent;
     [ServerEventType.TextDone]: TextDoneEvent;
@@ -113,19 +138,25 @@ type Parser<T> = (raw: any) => T;
 function parseSessionInfo(raw: any): SessionInfo {
     return {
         id: raw?.id ?? "",
-        model: raw?.model ?? "",
+        // Falls back to the retired `model` key so this SDK also parses a pre-rename server. This
+        // parser tolerates missing fields by construction, which is why the rename never broke the
+        // TypeScript SDK the way it broke the Python one — but falling back to `""` would leave
+        // callers reading an empty mode, so prefer the old key over nothing.
+        mode: raw?.mode ?? raw?.model ?? "",
         sourceLanguage: raw?.source_language ?? "",
         targetLanguage: raw?.target_language ?? "",
         outputModalities: Array.isArray(raw?.output_modalities) ? raw.output_modalities : [],
+        voice: raw?.voice,
     };
 }
 
 function parseSessionConfig(raw: any): SessionConfig {
     return {
-        model: raw?.model,
+        mode: raw?.mode ?? raw?.model,
         sourceLanguage: raw?.source_language ?? "",
         targetLanguage: raw?.target_language ?? "",
         outputModalities: Array.isArray(raw?.output_modalities) ? raw.output_modalities : [],
+        voice: raw?.voice,
     };
 }
 
@@ -148,6 +179,10 @@ export const PARSER_REGISTRY: {
     [ServerEventType.SessionUpdated]: (raw: any) => ({
         type: ServerEventType.SessionUpdated,
         session: parseSessionConfig(raw?.session),
+    }),
+    [ServerEventType.TranscriptDelta]: (raw: any) => ({
+        type: ServerEventType.TranscriptDelta,
+        delta: raw?.delta ?? "",
     }),
     [ServerEventType.TranscriptCompleted]: (raw: any) => ({
         type: ServerEventType.TranscriptCompleted,

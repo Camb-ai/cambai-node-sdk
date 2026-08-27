@@ -109,10 +109,19 @@ export class RealtimeSession {
     /**
      * Block until the server confirms the session is active.
      *
-     * Non-iris models cold-boot for 30+ seconds; the server sends
-     * `session.starting` during that window to signal it is still working.
-     * Rejects with `RealtimeConnectError` if `timeoutMs` elapses or the
-     * socket closes before `session.created` arrives.
+     * `"fast"` mode is ready almost immediately; `"slow"` mode cold-boots for 30+ seconds. The
+     * server sends `session.starting` during that window to signal it is still working. Rejects
+     * with `RealtimeConnectError` if `timeoutMs` elapses or the socket closes before
+     * `session.created` arrives.
+     *
+     * The default covers both modes' normal cold boot, but not the first-ever session for a given
+     * `voiceId`: that one additionally waits while the cloned voice is registered with the
+     * synthesis provider, which can take minutes and happens once per voice. This applies in
+     * *either* mode, because a cloned voice is always synthesized by the provider — in `"fast"`
+     * mode, passing a `voiceId` is what switches synthesis away from the translation model's own
+     * audio. Sessions without a `voiceId` never wait for it. Pass a larger `timeoutMs` when you
+     * know you are in that case, rather than raising this default and making every voice-less
+     * session slow to fail.
      */
     async waitUntilReady(timeoutMs: number = SESSION_READY_TIMEOUT_MS): Promise<void> {
         let timer: ReturnType<typeof setTimeout> | undefined;

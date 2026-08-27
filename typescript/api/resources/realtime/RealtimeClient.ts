@@ -1,6 +1,6 @@
 import * as core from "../../../core/index.js";
 import { RealtimeConnectError } from "./errors.js";
-import { ConnectOptions, resolveOptions, toQuery, toSessionPayload } from "./options.js";
+import { LegacyConnectOptions, resolveOptions, toQuery, toSessionPayload } from "./options.js";
 import { RealtimeSession } from "./RealtimeSession.js";
 import { Transport, WebSocketTransport } from "./Transport.js";
 
@@ -40,7 +40,9 @@ function httpToWs(url: string): string {
 export class RealtimeClient {
     constructor(private readonly options: RealtimeClientOptions) {}
 
-    async connect(opts: ConnectOptions): Promise<RealtimeSession> {
+    // Typed as `LegacyConnectOptions` so the retired `model` option still type-checks for
+    // callers who have not migrated; `resolveOptions` maps it and warns.
+    async connect(opts: LegacyConnectOptions): Promise<RealtimeSession> {
         const apiKey =
             opts.apiKey ??
             (this.options.apiKey

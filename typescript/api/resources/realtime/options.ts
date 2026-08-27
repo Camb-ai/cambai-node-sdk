@@ -1,8 +1,16 @@
-export enum RealtimeModel {
-    Lilac = "lilac",
-    Violet = "violet",
-    Iris = "iris",
-    Orchid = "orchid",
+/**
+ * Latency/quality tradeoff for a realtime session.
+ *
+ * `Fast` is ready to accept audio almost immediately and translates with the lowest latency, but
+ * supports fewer languages. `Slow` supports the full language list and translates more accurately,
+ * at the cost of a 30s+ cold boot before the session is ready.
+ *
+ * Replaces the former `RealtimeModel` engine codenames (`lilac`/`violet`/`iris`/`orchid`), which
+ * the server no longer accepts.
+ */
+export enum RealtimeMode {
+    Fast = "fast",
+    Slow = "slow",
 }
 
 export enum OutputModality {
@@ -18,7 +26,7 @@ export enum OutputModality {
  * (e.g. `"en-US"`, `"de-DE"`).
  */
 export interface ConnectOptions {
-    model?: RealtimeModel;
+    mode?: RealtimeMode;
     sourceLanguage: string;
     targetLanguage: string;
     outputModalities?: OutputModality[];
@@ -38,22 +46,99 @@ export interface ConnectOptions {
 }
 
 export interface ResolvedConnectOptions {
-    model: RealtimeModel;
+    mode: RealtimeMode;
     sourceLanguage: string;
     targetLanguage: string;
     outputModalities: OutputModality[];
     voiceId?: number;
 }
 
-export const DEFAULT_MODEL: RealtimeModel = RealtimeModel.Iris;
+export const DEFAULT_MODE: RealtimeMode = RealtimeMode.Fast;
 export const DEFAULT_OUTPUT_MODALITIES: OutputModality[] = [
     OutputModality.Text,
     OutputModality.Audio,
 ];
 
-export function resolveOptions(opts: ConnectOptions): ResolvedConnectOptions {
+/**
+ * The retired engine codenames, each mapped onto the mode running the closest pipeline.
+ *
+ * `iris` was the only engine without a cold boot, so it becomes `Fast`; the rest become `Slow`.
+ * Accepted rather than rejected so code written against the old `model` option keeps working — and
+ * this matters more here than anywhere else, because an SDK consumer upgrades on their own
+ * schedule, not ours.
+ *
+ * Mirrors `LEGACY_ENGINE_CODENAMES` in realtime-api-server's `protocol.rs` and
+ * `LEGACY_REALTIME_ENGINE_CODENAMES` in the Python contract; all three must agree.
+ */
+export const LEGACY_ENGINE_CODENAMES: Readonly<Record<string, RealtimeMode>> = Object.freeze({
+    iris: RealtimeMode.Fast,
+    lilac: RealtimeMode.Slow,
+    violet: RealtimeMode.Slow,
+    orchid: RealtimeMode.Slow,
+});
+
+/**
+ * Resolves a selector, accepting `fast`/`slow` and the retired codenames. Returns `undefined` for a
+ * value that was never valid, so the caller can reject it — accepting the codenames must not
+ * degrade into accepting anything.
+ */
+export function resolveMode(value: string): RealtimeMode | undefined {
+    if ((Object.values(RealtimeMode) as string[]).includes(value)) {
+        return value as RealtimeMode;
+    }
+    return LEGACY_ENGINE_CODENAMES[value];
+}
+
+/**
+ * The retired `model` option, still read so pre-rename code keeps working.
+ *
+ * Declared as an interface extension rather than on {@link ConnectOptions} so the current shape
+ * stays the one that shows up in editor completion, while a `model` key still type-checks for
+ * anyone who has not migrated.
+ */
+export interface LegacyConnectOptions extends ConnectOptions {
+    /** @deprecated Replaced by `mode`. `iris` maps to `fast`; `lilac`/`violet`/`orchid` to `slow`. */
+    model?: string;
+}
+
+function warnDeprecated(message: string): void {
+    // `console.warn` rather than a thrown error or a silent rewrite: the caller keeps working, and
+    // the migration stays visible. Guarded because non-browser hosts can lack `console`.
+    if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(`[camb-ai] ${message}`);
+    }
+}
+
+export function resolveOptions(opts: LegacyConnectOptions): ResolvedConnectOptions {
+    // Warned about on being supplied, not on winning: a caller sending both is still shipping the
+    // retired option. Matches the server-side shim, which keys off the same condition.
+    if (opts.model !== undefined) {
+        warnDeprecated(
+            "The realtime `model` option is deprecated; use `mode` with 'fast' or 'slow'.",
+        );
+    }
+    // `mode` wins when both are present — it is the option the caller migrated to.
+    const selector = opts.mode ?? opts.model;
+    let mode = DEFAULT_MODE;
+    if (selector !== undefined) {
+        const resolved = resolveMode(selector);
+        if (resolved === undefined) {
+            throw new TypeError(
+                `Unsupported realtime mode \`${selector}\`: expected ` +
+                    `${Object.values(RealtimeMode)
+                        .map((value) => `'${value}'`)
+                        .join(" or ")}`,
+            );
+        }
+        if (resolved !== selector) {
+            warnDeprecated(
+                `The realtime engine codename '${selector}' is deprecated; use mode: '${resolved}'.`,
+            );
+        }
+        mode = resolved;
+    }
     return {
-        model: opts.model ?? DEFAULT_MODEL,
+        mode,
         sourceLanguage: opts.sourceLanguage,
         targetLanguage: opts.targetLanguage,
         outputModalities: opts.outputModalities ?? DEFAULT_OUTPUT_MODALITIES,
@@ -64,14 +149,14 @@ export function resolveOptions(opts: ConnectOptions): ResolvedConnectOptions {
 /** Query-string parameters sent on the WebSocket upgrade URL. */
 export function toQuery(opts: ResolvedConnectOptions): URLSearchParams {
     const params = new URLSearchParams();
-    params.set("model", opts.model);
+    params.set("mode", opts.mode);
     return params;
 }
 
 /** Body of the `session.update` message sent after the WS handshake. */
 export function toSessionPayload(opts: ResolvedConnectOptions): Record<string, unknown> {
     const session: Record<string, unknown> = {
-        model: opts.model,
+        mode: opts.mode,
         source_language: opts.sourceLanguage,
         target_language: opts.targetLanguage,
         output_modalities: opts.outputModalities,
