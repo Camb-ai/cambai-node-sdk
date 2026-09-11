@@ -24,4 +24,8 @@ export interface EndToEndDubbingRequestPayload {
     ai_optimization?: boolean | null;
     /** Transcription mode: `fast` (default) or `slow` for a more thorough pass. */
     transcription_mode?: "fast" | "slow" | null;
+    /** Original-language SRT contents. Parsing and size limits are validated by the API. */
+    source_transcript?: CambApi.DubSRTInput | null;
+    /** Translated SRT contents, at most one per requested target language. */
+    target_transcripts?: CambApi.DubTargetSRTInput[] | null;
 }

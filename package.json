@@ -1,6 +1,6 @@
 {
   "name": "@camb-ai/sdk",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Official TypeScript SDK for Camb.ai - Advanced voice and audio generation APIs",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "test": "npm run build && tsc --noEmit --strict --skipLibCheck --module NodeNext --moduleResolution NodeNext tests/dub-srt.types.ts && node --test tests/*.test.mjs",
     "prepare": "npm run build",
     "clean": "rm -rf dist",
     "rebuild": "npm run clean && npm run build"

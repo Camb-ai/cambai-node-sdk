@@ -1,4 +1,6 @@
 export * from "./AddTargetLanguageOut.js";
+export * from "./DubSRTInput.js";
+export * from "./DubTargetSRTInput.js";
 export * from "./AudioOutputType.js";
 export * from "./AudioStream.js";
 export * from "./ConfigStream.js";

@@ -266,7 +266,7 @@ const taskId = response.task_id;
 console.log(`Dub Task created with ID: ${taskId}`);
 
 while (true) {
-  const statusResponse = await client.dub.getDubbingStatus({ task_id: taskId });
+  const statusResponse = await client.dub.getEndToEndDubbingStatus({ task_id: taskId });
   console.log(`Current Status: ${statusResponse.status}`);
 
   if (statusResponse.status === "SUCCESS") {
@@ -282,6 +282,56 @@ while (true) {
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 ```
+
+#### Use your own SRT transcript or translation
+
+Read SRT files as UTF-8 and pass their contents when creating a dub:
+
+```typescript
+import { readFile } from "node:fs/promises";
+import { CambClient, CambApi } from "@camb-ai/sdk";
+
+const client = new CambClient({ apiKey: process.env.CAMB_API_KEY });
+const sourceTranscript: CambApi.DubSRTInput = {
+  content: await readFile("original.srt", "utf-8"),
+};
+const spanishTranslation: CambApi.DubTargetSRTInput = {
+  language: CambApi.Languages.ES_ES,
+  content: await readFile("spanish.srt", "utf-8"),
+};
+
+try {
+  const response = await client.dub.endToEndDubbing({
+    video_url: "https://example.com/your-video.mp4",
+    source_language: CambApi.Languages.EN_US,
+    target_languages: [CambApi.Languages.ES_ES],
+    source_transcript: sourceTranscript,
+    target_transcripts: [spanishTranslation],
+  });
+  console.log(`Dub task: ${response.task_id}`);
+  // Poll and retrieve output using the example above.
+} catch (error) {
+  if (error instanceof CambApi.UnprocessableEntityError) {
+    console.error("Invalid dubbing input:", error.body);
+  }
+  throw error;
+}
+```
+
+Inline object literals also work. `format` defaults to `"srt"`; send text, not
+a filename, URL, base64 string, or segment array. In a browser, use `await file.text()`
+to read a selected SRT file instead of `node:fs/promises`.
+
+Both fields are optional: supply the original transcript, translations, both, or
+neither. Targets without a supplied translation use automatic translation.
+Use one target script per language and include that language in `target_languages`.
+The same inputs work with `.withRawResponse()`.
+
+The API validates SRT parsing and requires at least one cue. Limits are 2 MiB
+UTF-8 per script, 10 MiB combined, and 100 target scripts. Overlapping and
+out-of-order cues are allowed; the SDK adds no cue-level validation. Invalid
+inputs return HTTP 422 as `CambApi.UnprocessableEntityError`, with field details
+in its `body`. These arguments require backend custom-SRT support.
 
 ### 5. Transcription & Subtitles
 
